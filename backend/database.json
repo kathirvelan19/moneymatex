@@ -1,0 +1,150 @@
+{
+  "users": [
+    {
+      "id": "usr_1786776099367_hizf9",
+      "email": "usera_1786776099019@test.com",
+      "password_hash": "$2a$10$U/OWUOu6mJdkMmMqWGgiwezc5TM7koSCR7K564JsvGO0acX5NDM/W",
+      "name": "User A",
+      "created_at": "2026-08-15T06:41:39.434Z"
+    },
+    {
+      "id": "usr_1786776099449_qpm1c",
+      "email": "userb_1786776099447@test.com",
+      "password_hash": "$2a$10$9F8HWSbEHk4fOyxWqx.42OAfjlJ7mP1mB0pSSNm1azXIPRzCm74Fu",
+      "name": "User B",
+      "created_at": "2026-08-15T06:41:39.507Z"
+    },
+    {
+      "id": "usr_1786776339523_l8fhg",
+      "email": "usera_1786776339503@test.com",
+      "password_hash": "$2a$10$XnwIpCFYEGzr7JIk5CBpA.zaCniUiQJmDhYVf4MYxsOEH8C/xz3Hq",
+      "name": "User A",
+      "created_at": "2026-08-15T06:45:39.581Z"
+    },
+    {
+      "id": "usr_1786776339591_9w0qa",
+      "email": "userb_1786776339588@test.com",
+      "password_hash": "$2a$10$eMSDcXRO6iPuJn3Ow8ZZCuugVQcS5C9h836eORbcgT551uTxQsCHC",
+      "name": "User B",
+      "created_at": "2026-08-15T06:45:39.648Z"
+    },
+    {
+      "id": "usr_1786892181436_kny94",
+      "email": "kathirvelankvr@gmail.com",
+      "password_hash": "$2a$10$XbjKCmEUxCZoyoBjFmw0zOwR7T4mS0FU9zdieth5Vrs.ZER8xudi.",
+      "name": "kathir",
+      "created_at": "2026-08-16T14:56:21.655Z"
+    }
+  ],
+  "wallets": [],
+  "transactions": [
+    {
+      "id": "tx_1786776099515",
+      "user_id": "usr_1786776099367_hizf9",
+      "title": "Salary",
+      "category": "Salary",
+      "amount": 50000,
+      "is_expense": 0,
+      "date": "2026-08-01",
+      "payment_method": "Bank",
+      "wallet_id": "",
+      "notes": "",
+      "created_at": "2026-08-15T06:41:39.515Z"
+    },
+    {
+      "id": "tx_1786776099520",
+      "user_id": "usr_1786776099367_hizf9",
+      "title": "Food & Dining",
+      "category": "Food",
+      "amount": 5000,
+      "is_expense": 1,
+      "date": "2026-08-02",
+      "payment_method": "Card",
+      "wallet_id": "",
+      "notes": "",
+      "created_at": "2026-08-15T06:41:39.520Z"
+    },
+    {
+      "id": "tx_1786776099525",
+      "user_id": "usr_1786776099449_qpm1c",
+      "title": "Snacks",
+      "category": "Food",
+      "amount": 1000,
+      "is_expense": 1,
+      "date": "2026-08-03",
+      "payment_method": "Cash",
+      "wallet_id": "",
+      "notes": "",
+      "created_at": "2026-08-15T06:41:39.525Z"
+    },
+    {
+      "id": "tx_1786776339655",
+      "user_id": "usr_1786776339523_l8fhg",
+      "title": "Salary",
+      "category": "Salary",
+      "amount": 50000,
+      "is_expense": 0,
+      "date": "2026-08-01",
+      "payment_method": "Bank",
+      "wallet_id": "",
+      "notes": "",
+      "created_at": "2026-08-15T06:45:39.655Z"
+    },
+    {
+      "id": "tx_1786776339659",
+      "user_id": "usr_1786776339523_l8fhg",
+      "title": "Food & Dining",
+      "category": "Food",
+      "amount": 5000,
+      "is_expense": 1,
+      "date": "2026-08-02",
+      "payment_method": "Card",
+      "wallet_id": "",
+      "notes": "",
+      "created_at": "2026-08-15T06:45:39.659Z"
+    },
+    {
+      "id": "tx_1786776339663",
+      "user_id": "usr_1786776339591_9w0qa",
+      "title": "Snacks",
+      "category": "Food",
+      "amount": 1000,
+      "is_expense": 1,
+      "date": "2026-08-03",
+      "payment_method": "Cash",
+      "wallet_id": "",
+      "notes": "",
+      "created_at": "2026-08-15T06:45:39.663Z"
+    }
+  ],
+  "goals": [],
+  "goal_contributions": [],
+  "bills": [],
+  "profiles": [
+    {
+      "user_id": "usr_1786776099367_hizf9",
+      "occupation": "Professional",
+      "financial_priority": "Manage Expenses"
+    },
+    {
+      "user_id": "usr_1786776099449_qpm1c",
+      "occupation": "Professional",
+      "financial_priority": "Manage Expenses"
+    },
+    {
+      "user_id": "usr_1786776339523_l8fhg",
+      "occupation": "Professional",
+      "financial_priority": "Manage Expenses"
+    },
+    {
+      "user_id": "usr_1786776339591_9w0qa",
+      "occupation": "Professional",
+      "financial_priority": "Manage Expenses"
+    },
+    {
+      "user_id": "usr_1786892181436_kny94",
+      "occupation": "Professional",
+      "financial_priority": "Manage Expenses"
+    }
+  ]
+}
