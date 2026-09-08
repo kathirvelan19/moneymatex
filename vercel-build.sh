@@ -1,15 +1,19 @@
 #!/bin/bash
 set -e
 
-# Mark git directories as safe for Vercel root container context
+# Disable git dubious ownership checks across all directories in Vercel environment
 git config --global --add safe.directory '*'
+git config --global --add safe.directory "$(pwd)"
+
+export BOT=true
+export CI=true
 
 echo "=== Installing Flutter SDK on Vercel ==="
 curl -sL https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.3-stable.tar.xz -o flutter.tar.xz
 tar -xf flutter.tar.xz
-export PATH="$PATH:$(pwd)/flutter/bin"
+export PATH="$(pwd)/flutter/bin:$PATH"
 
-# Add downloaded Flutter folder to git safe directory
+# Ensure extracted Flutter SDK directory is marked safe
 git config --global --add safe.directory "$(pwd)/flutter"
 
 echo "=== Flutter Version ==="
