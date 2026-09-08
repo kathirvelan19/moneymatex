@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: monematex-backend
+    runtime: docker
+    rootDir: backend-springboot
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    envVars:
+      - key: AI_API_KEY
+        sync: false
