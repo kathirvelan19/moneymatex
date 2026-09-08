@@ -61,4 +61,8 @@ public class PasswordResetService {
         resetsByEmail.remove(email.toLowerCase().trim());
         return true;
     }
+
+    public boolean validateResetSession(String email, String resetToken) {
+        return validateResetTokenAndConsume(email, resetToken);
+    }
 }
