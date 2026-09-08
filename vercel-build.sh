@@ -1,50 +1,44 @@
 #!/bin/bash
-set -e
 
-# Fix Git dubious ownership for Vercel build container
-git config --global --add safe.directory "*"
-git config --global --add safe.directory "$(pwd)"
+set -e
 
 echo "=== Installing Flutter SDK on Vercel ==="
 
-FLUTTER_VERSION="3.24.3"
-FLUTTER_DIR="$(pwd)/flutter"
+FLUTTER_VERSION="3.47.2"
 
-# Download Flutter SDK
+cd /tmp
+
+rm -rf flutter
+rm -f flutter.tar.xz
+
 curl -L \
   "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" \
   -o flutter.tar.xz
 
-# Extract
 tar -xf flutter.tar.xz
 
-# Mark extracted directory as safe
-git config --global --add safe.directory "$FLUTTER_DIR"
+export PATH="/tmp/flutter/bin:$PATH"
 
-# Add Flutter to PATH
-export PATH="$FLUTTER_DIR/bin:$PATH"
+echo "=== Flutter Location ==="
+which flutter
 
 echo "=== Flutter Version ==="
 flutter --version
 
-echo "=== Enabling Flutter Web ==="
+echo "=== Getting Dependencies ==="
+
+cd /vercel/path0
+
 flutter config --enable-web
 flutter config --no-analytics
-
-echo "=== Getting Dependencies ==="
 flutter pub get
 
 echo "=== Building Flutter Web ==="
 
 if [ -n "$API_BASE_URL" ]; then
-    echo "Using API_BASE_URL=$API_BASE_URL"
-
-    flutter build web \
-        --release \
-        --dart-define=API_BASE_URL="$API_BASE_URL"
+    flutter build web --release \
+      --dart-define=API_BASE_URL="$API_BASE_URL"
 else
-    echo "Using default API_BASE_URL"
-
     flutter build web --release
 fi
 
