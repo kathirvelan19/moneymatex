@@ -1,31 +1,27 @@
 #!/bin/bash
-
 set -e
 
-echo "=== Installing Flutter SDK on Vercel ==="
-
-# Flutter version required by the project
-FLUTTER_VERSION="3.47.2"
-FLUTTER_DIR="$(pwd)/flutter"
-
-# Fix Git dubious ownership
+# Fix Git dubious ownership for Vercel build container
 git config --global --add safe.directory "*"
 git config --global --add safe.directory "$(pwd)"
 
-export BOT=true
-export CI=true
+echo "=== Installing Flutter SDK on Vercel ==="
 
-echo "=== Downloading Flutter ${FLUTTER_VERSION} ==="
+FLUTTER_VERSION="3.24.3"
+FLUTTER_DIR="$(pwd)/flutter"
 
-git clone \
-  --depth 1 \
-  --branch ${FLUTTER_VERSION} \
-  https://github.com/flutter/flutter.git \
-  "$FLUTTER_DIR"
+# Download Flutter SDK
+curl -L \
+  "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" \
+  -o flutter.tar.xz
 
-# Mark Flutter SDK as trusted
+# Extract
+tar -xf flutter.tar.xz
+
+# Mark extracted directory as safe
 git config --global --add safe.directory "$FLUTTER_DIR"
 
+# Add Flutter to PATH
 export PATH="$FLUTTER_DIR/bin:$PATH"
 
 echo "=== Flutter Version ==="
@@ -35,21 +31,21 @@ echo "=== Enabling Flutter Web ==="
 flutter config --enable-web
 flutter config --no-analytics
 
-echo "=== Installing Dependencies ==="
+echo "=== Getting Dependencies ==="
 flutter pub get
 
-echo "=== Building Flutter Web App ==="
+echo "=== Building Flutter Web ==="
 
 if [ -n "$API_BASE_URL" ]; then
-  echo "Building with API_BASE_URL=$API_BASE_URL"
+    echo "Using API_BASE_URL=$API_BASE_URL"
 
-  flutter build web \
-    --release \
-    --dart-define=API_BASE_URL="$API_BASE_URL"
+    flutter build web \
+        --release \
+        --dart-define=API_BASE_URL="$API_BASE_URL"
 else
-  echo "Building with default API_BASE_URL"
+    echo "Using default API_BASE_URL"
 
-  flutter build web --release
+    flutter build web --release
 fi
 
 echo "=== Build Completed Successfully ==="
