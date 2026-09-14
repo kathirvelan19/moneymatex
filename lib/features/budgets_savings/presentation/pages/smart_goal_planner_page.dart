@@ -220,7 +220,7 @@ class _SmartGoalPlannerPageState extends ConsumerState<SmartGoalPlannerPage> {
             Text('Category', style: AppTypography.labelSmall),
             const SizedBox(height: 4),
             DropdownButtonFormField<String>(
-              initialValue: _category,
+              value: _category,
               decoration: InputDecoration(
                 fillColor: AppColors.surfaceContainerLow,
                 filled: true,

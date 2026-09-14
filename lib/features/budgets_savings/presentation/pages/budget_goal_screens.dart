@@ -697,7 +697,7 @@ class _SmartGoalPlannerPageState extends ConsumerState<SmartGoalPlannerPage> {
 
                         // Category Dropdown
                         DropdownButtonFormField<String>(
-                          initialValue: _categories.contains(_selectedCategory) ? _selectedCategory : _categories.first,
+                          value: _categories.contains(_selectedCategory) ? _selectedCategory : _categories.first,
                           decoration: const InputDecoration(
                             labelText: 'Category',
                             prefixIcon: Icon(Icons.category_outlined),

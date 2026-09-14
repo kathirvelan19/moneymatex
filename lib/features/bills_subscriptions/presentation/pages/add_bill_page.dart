@@ -176,7 +176,7 @@ class _AddBillPageState extends ConsumerState<AddBillPage> {
             Text('Category', style: AppTypography.labelSmall),
             const SizedBox(height: AppSpacing.s),
             DropdownButtonFormField<String>(
-              initialValue: _category,
+              value: _category,
               decoration: InputDecoration(
                 fillColor: AppColors.surfaceContainerLow,
                 filled: true,
@@ -216,7 +216,7 @@ class _AddBillPageState extends ConsumerState<AddBillPage> {
             Text('Payment Method', style: AppTypography.labelSmall),
             const SizedBox(height: AppSpacing.s),
             DropdownButtonFormField<String>(
-              initialValue: wallets.isNotEmpty ? wallets.first.name : _paymentMethod,
+              value: wallets.isNotEmpty ? wallets.first.name : _paymentMethod,
               decoration: InputDecoration(
                 fillColor: AppColors.surfaceContainerLow,
                 filled: true,

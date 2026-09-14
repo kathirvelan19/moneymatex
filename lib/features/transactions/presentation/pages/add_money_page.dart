@@ -269,7 +269,7 @@ class _AddMoneyPageState extends ConsumerState<AddMoneyPage> {
                           )
                         else
                           DropdownButtonFormField<String>(
-                            initialValue: _selectedWalletId ?? (wallets.isNotEmpty ? wallets.first.id : null),
+                            value: _selectedWalletId ?? (wallets.isNotEmpty ? wallets.first.id : null),
                             decoration: const InputDecoration(
                               prefixIcon: Icon(Icons.account_balance_wallet_outlined),
                             ),
@@ -310,7 +310,7 @@ class _AddMoneyPageState extends ConsumerState<AddMoneyPage> {
 
                         // Type Dropdown
                         DropdownButtonFormField<String>(
-                          initialValue: _selectedType,
+                          value: _selectedType,
                           decoration: const InputDecoration(
                             labelText: 'Category / Type',
                             prefixIcon: Icon(Icons.category_outlined),

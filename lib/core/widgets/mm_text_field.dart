@@ -155,7 +155,7 @@ class MMDropdownField<T> extends StatelessWidget {
         SizedBox(
           height: 48,
           child: DropdownButtonFormField<T>(
-            initialValue: value,
+            value: value,
             items: items,
             onChanged: onChanged,
             style: AppTypography.bodyMedium.copyWith(color: AppColors.onBackground),

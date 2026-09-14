@@ -259,7 +259,7 @@ class _FinancialProfilePageState extends ConsumerState<FinancialProfilePage> {
                         const SizedBox(height: AppSpacing.m),
 
                         DropdownButtonFormField<String>(
-                          initialValue: _selectedOccupation,
+                          value: _selectedOccupation,
                           decoration: const InputDecoration(
                             labelText: 'Occupation / Employment Status',
                             prefixIcon: Icon(Icons.work_outline),
@@ -348,7 +348,7 @@ class _FinancialProfilePageState extends ConsumerState<FinancialProfilePage> {
                         const SizedBox(height: AppSpacing.m),
 
                         DropdownButtonFormField<String>(
-                          initialValue: _selectedPriority,
+                          value: _selectedPriority,
                           decoration: const InputDecoration(
                             labelText: 'Primary Financial Priority',
                             prefixIcon: Icon(Icons.flag_outlined),

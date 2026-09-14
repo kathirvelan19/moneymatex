@@ -403,7 +403,7 @@ class _TransactionDetailsPageState extends ConsumerState<TransactionDetailsPage>
             Text('Category', style: AppTypography.labelSmall),
             const SizedBox(height: 4),
             DropdownButtonFormField<String>(
-              initialValue: _categoryController.text.isNotEmpty ? _categoryController.text : null,
+              value: _categoryController.text.isNotEmpty ? _categoryController.text : null,
               hint: const Text('[ Select category ]'),
               decoration: InputDecoration(
                 fillColor: AppColors.surfaceContainerLow,
@@ -431,7 +431,7 @@ class _TransactionDetailsPageState extends ConsumerState<TransactionDetailsPage>
             Text('Account / Wallet', style: AppTypography.labelSmall),
             const SizedBox(height: 4),
             DropdownButtonFormField<String>(
-              initialValue: _selectedWallet.isNotEmpty
+              value: _selectedWallet.isNotEmpty
                   ? _selectedWallet
                   : (wallets.isNotEmpty ? wallets.first.name : null),
               hint: const Text('[ Select account / wallet ]'),
