@@ -4,7 +4,7 @@ set -e
 
 echo "=== Installing Flutter SDK on Vercel ==="
 
-FLUTTER_VERSION="3.47.2"
+FLUTTER_VERSION="3.27.4"
 
 ROOT_DIR="$(pwd)"
 
@@ -34,6 +34,14 @@ echo "=== Getting Dependencies ==="
 
 cd "$ROOT_DIR"
 
+if [ ! -f .env ]; then
+    if [ -f .env.example ]; then
+        cp .env.example .env
+    else
+        touch .env
+    fi
+fi
+
 flutter config --enable-web
 flutter config --no-analytics
 flutter pub get
@@ -42,9 +50,11 @@ echo "=== Building Flutter Web ==="
 
 if [ -n "$API_BASE_URL" ]; then
     flutter build web --release \
+      --no-tree-shake-icons \
       --dart-define=API_BASE_URL="$API_BASE_URL"
 else
-    flutter build web --release
+    flutter build web --release \
+      --no-tree-shake-icons
 fi
 
 echo "=== Build Completed Successfully ==="
