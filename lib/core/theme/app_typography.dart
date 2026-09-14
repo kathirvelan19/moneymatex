@@ -3,11 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 /// MoneyMateX Typography System
-/// Headings & Body: Hanken Grotesk
-/// Technical Data, Currency, Timestamps & Labels: Geist
+/// Powered everywhere by GoogleFonts.poppins
 abstract class AppTypography {
   // Display (Hero Splash, Main Net Worth Totals)
-  static TextStyle display = GoogleFonts.hankenGrotesk(
+  static TextStyle display = GoogleFonts.poppins(
     fontSize: 48,
     fontWeight: FontWeight.w700,
     height: 1.1,
@@ -16,7 +15,7 @@ abstract class AppTypography {
   );
 
   // Headline Large (Section Headers)
-  static TextStyle headlineLarge = GoogleFonts.hankenGrotesk(
+  static TextStyle headlineLarge = GoogleFonts.poppins(
     fontSize: 32,
     fontWeight: FontWeight.w600,
     height: 1.2,
@@ -25,7 +24,7 @@ abstract class AppTypography {
   );
 
   // Headline Mobile (Screen Titles)
-  static TextStyle headlineMobile = GoogleFonts.hankenGrotesk(
+  static TextStyle headlineMobile = GoogleFonts.poppins(
     fontSize: 24,
     fontWeight: FontWeight.w600,
     height: 1.2,
@@ -34,7 +33,7 @@ abstract class AppTypography {
   );
 
   // Headline Medium (Card Titles)
-  static TextStyle headlineMedium = GoogleFonts.hankenGrotesk(
+  static TextStyle headlineMedium = GoogleFonts.poppins(
     fontSize: 20,
     fontWeight: FontWeight.w600,
     height: 1.4,
@@ -43,7 +42,7 @@ abstract class AppTypography {
   );
 
   // Body Large (Primary Readability Text)
-  static TextStyle bodyLarge = GoogleFonts.hankenGrotesk(
+  static TextStyle bodyLarge = GoogleFonts.poppins(
     fontSize: 18,
     fontWeight: FontWeight.w400,
     height: 1.6,
@@ -52,7 +51,7 @@ abstract class AppTypography {
   );
 
   // Body Medium (Standard Descriptions)
-  static TextStyle bodyMedium = GoogleFonts.hankenGrotesk(
+  static TextStyle bodyMedium = GoogleFonts.poppins(
     fontSize: 16,
     fontWeight: FontWeight.w400,
     height: 1.6,
@@ -60,9 +59,8 @@ abstract class AppTypography {
     color: AppColors.onSurfaceVariant,
   );
 
-  // Label Small (Geist - Currencies, Data Points, Percentages, Timestamps)
-  static TextStyle labelSmall = const TextStyle(
-    fontFamily: 'Geist',
+  // Label Small (Currencies, Data Points, Percentages, Timestamps)
+  static TextStyle labelSmall = GoogleFonts.poppins(
     fontSize: 13,
     fontWeight: FontWeight.w500,
     height: 1.2,
@@ -70,9 +68,8 @@ abstract class AppTypography {
     color: AppColors.onSurfaceVariant,
   );
 
-
   // Tagline (Understated Editorial Quotes)
-  static TextStyle tagline = GoogleFonts.hankenGrotesk(
+  static TextStyle tagline = GoogleFonts.poppins(
     fontSize: 14,
     fontWeight: FontWeight.w300,
     height: 1.4,
@@ -80,3 +77,4 @@ abstract class AppTypography {
     color: AppColors.secondary,
   );
 }
+

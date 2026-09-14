@@ -256,50 +256,50 @@ Colors:
 
 ### 5.2 Typography System
 
-The typography strictly uses **Hanken Grotesk** for headings, subtitles, and standard body text, and **Geist** for technical data, monetary figures, timestamps, percentages, and table labels.
+The typography strictly uses **Poppins** across all text styles, headings, subtitles, body text, technical data, monetary figures, timestamps, percentages, and labels.
 
 ```yaml
 Typography:
   display:
-    fontFamily: Hanken Grotesk
+    fontFamily: Poppins
     fontSize: 48px
     fontWeight: 700 (Bold)
     lineHeight: 1.1
     letterSpacing: -0.02em
   headline-lg:
-    fontFamily: Hanken Grotesk
+    fontFamily: Poppins
     fontSize: 32px
     fontWeight: 600 (SemiBold)
     lineHeight: 1.2
     letterSpacing: -0.01em
   headline-lg-mobile:
-    fontFamily: Hanken Grotesk
+    fontFamily: Poppins
     fontSize: 24px
     fontWeight: 600 (SemiBold)
     lineHeight: 1.2
   headline-md:
-    fontFamily: Hanken Grotesk
+    fontFamily: Poppins
     fontSize: 20px
     fontWeight: 600 (SemiBold)
     lineHeight: 1.4
   body-lg:
-    fontFamily: Hanken Grotesk
+    fontFamily: Poppins
     fontSize: 18px
     fontWeight: 400 (Regular)
     lineHeight: 1.6
   body-md:
-    fontFamily: Hanken Grotesk
+    fontFamily: Poppins
     fontSize: 16px
     fontWeight: 400 (Regular)
     lineHeight: 1.6
   label-sm:
-    fontFamily: Geist # Technical Monospace Data
+    fontFamily: Poppins
     fontSize: 13px
     fontWeight: 500 (Medium)
     lineHeight: 1.2
     letterSpacing: 0.02em
   tagline:
-    fontFamily: Hanken Grotesk
+    fontFamily: Poppins
     fontSize: 14px
     fontWeight: 300 (Light)
     lineHeight: 1.4
