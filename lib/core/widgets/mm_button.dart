@@ -8,7 +8,7 @@ enum MMButtonType { primary, secondary, text }
 /// Centralized MoneyMateX Button component supporting Primary, Secondary, and Text variants
 class MMButton extends StatelessWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final MMButtonType type;
   final IconData? icon;
   final bool fullWidth;
@@ -16,7 +16,7 @@ class MMButton extends StatelessWidget {
   const MMButton({
     super.key,
     required this.label,
-    required this.onPressed,
+    this.onPressed,
     this.type = MMButtonType.primary,
     this.icon,
     this.fullWidth = true,
@@ -25,7 +25,7 @@ class MMButton extends StatelessWidget {
   const MMButton.primary({
     super.key,
     required this.label,
-    required this.onPressed,
+    this.onPressed,
     this.icon,
     this.fullWidth = true,
   }) : type = MMButtonType.primary;
@@ -33,7 +33,7 @@ class MMButton extends StatelessWidget {
   const MMButton.secondary({
     super.key,
     required this.label,
-    required this.onPressed,
+    this.onPressed,
     this.icon,
     this.fullWidth = true,
   }) : type = MMButtonType.secondary;
@@ -41,7 +41,7 @@ class MMButton extends StatelessWidget {
   const MMButton.text({
     super.key,
     required this.label,
-    required this.onPressed,
+    this.onPressed,
     this.icon,
     this.fullWidth = false,
   }) : type = MMButtonType.text;

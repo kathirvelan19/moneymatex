@@ -410,32 +410,29 @@ class _HelpSupportCenterPageState extends State<HelpSupportCenterPage> {
                         icon: Icons.send_rounded,
                         onPressed: isSubmitting
                             ? null
-                            : () async {
+                            : () {
                                 if (formKey.currentState!.validate()) {
                                   setModalState(() => isSubmitting = true);
-                                  await Future.delayed(const Duration(milliseconds: 1000));
-                                  if (context.mounted) {
-                                    final ticketId = 'MMX-${10000 + Random().nextInt(89999)}';
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: AppColors.primary,
-                                        content: Row(
-                                          children: [
-                                            const Icon(Icons.check_circle, color: Colors.white),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                'Ticket $ticketId submitted successfully! We will contact your email shortly.',
-                                                style: const TextStyle(color: Colors.white),
+                                  Future.delayed(const Duration(milliseconds: 1000)).then((_) {
+                                    if (context.mounted) {
+                                      final ticketId = 'MMX-${10000 + Random().nextInt(89999)}';
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppColors.primary,
+                                          content: Row(
+                                            children: [
+                                              const Icon(Icons.check_circle, color: Colors.white),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text('Support ticket #$ticketId submitted! We will respond within 24h.'),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                        duration: const Duration(seconds: 4),
-                                      ),
-                                    );
-                                  }
+                                      );
+                                    }
+                                  });
                                 }
                               },
                         type: MMButtonType.primary,
