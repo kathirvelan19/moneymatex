@@ -1,7 +1,7 @@
 abstract class ApiEndpoints {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000/api/v1',
+    defaultValue: 'https://moneymatex-backend.onrender.com/api/v1',
   );
 
   // Auth Status
