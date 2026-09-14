@@ -7,5 +7,27 @@ services:
     plan: free
     region: oregon
     envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: monematex-postgres
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: monematex-postgres
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: monematex-postgres
+          property: password
       - key: AI_API_KEY
         sync: false
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: monematex-postgres
+    plan: free
+    region: oregon
+    databaseName: monematex_db
+    user: monematex_user
+
