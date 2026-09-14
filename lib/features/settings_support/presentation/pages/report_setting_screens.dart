@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/config/env_config.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -15,11 +16,79 @@ import '../../../../features/auth_onboarding/presentation/providers/auth_provide
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
+  void _showGeminiApiKeyDialog(BuildContext context) {
+    final keyController = TextEditingController(text: EnvConfig.geminiApiKey);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.key_outlined, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text('Gemini API Key Settings'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter your Google Gemini API Key to enable AI receipt OCR scanning and AI financial advisory features:',
+                style: AppTypography.bodyMedium.copyWith(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: keyController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Gemini API Key',
+                  hintText: 'AIzaSy...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Get your key free at aistudio.google.com',
+                style: AppTypography.labelSmall.copyWith(color: AppColors.primary, fontSize: 11),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final key = keyController.text.trim();
+                await EnvConfig.saveGeminiApiKey(key);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(key.isNotEmpty
+                          ? 'Gemini API Key saved successfully!'
+                          : 'Gemini API Key cleared.'),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Save Key'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfile = ref.watch(userProfileProvider);
     final userName = userProfile.name.isNotEmpty ? userProfile.name : 'MoneyMateX User';
     final userOccupation = userProfile.occupation.isNotEmpty ? userProfile.occupation : 'Member';
+    final isKeyConfigured = EnvConfig.isGeminiApiKeyConfigured;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -122,6 +191,18 @@ class SettingsPage extends ConsumerWidget {
                     icon: Icons.psychology_outlined,
                     iconColor: AppColors.primary,
                     onTap: () => context.go(AppRoutes.aiAdvisor),
+                  ),
+                  const SizedBox(height: AppSpacing.stackSm),
+
+                  _buildTile(
+                    context,
+                    title: 'Gemini API Key Settings',
+                    subtitle: isKeyConfigured
+                        ? 'Configured • Tap to view or update key'
+                        : 'Not Configured • Tap to set up your Gemini API Key',
+                    icon: Icons.key_outlined,
+                    iconColor: isKeyConfigured ? const Color(0xFF2E7D32) : AppColors.error,
+                    onTap: () => _showGeminiApiKeyDialog(context),
                   ),
                   const SizedBox(height: AppSpacing.stackSm),
 

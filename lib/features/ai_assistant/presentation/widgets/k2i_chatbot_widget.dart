@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/config/env_config.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/services/financial_analytics_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -236,8 +237,80 @@ Please try again or select one of the suggested topics below!''',
     );
   }
 
+  void _showApiKeyDialog(BuildContext context) {
+    final keyController = TextEditingController(text: EnvConfig.geminiApiKey);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.key_outlined, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text('Gemini API Key'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Configure your Google Gemini API Key for K2i AI Chatbot and Receipt Scanning:',
+                style: AppTypography.bodyMedium.copyWith(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: keyController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Gemini API Key',
+                  hintText: 'AIzaSy...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Get a key at aistudio.google.com',
+                style: AppTypography.labelSmall.copyWith(color: AppColors.primary, fontSize: 11),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                final key = keyController.text.trim();
+                await EnvConfig.saveGeminiApiKey(key);
+                if (mounted) {
+                  setState(() {});
+                  navigator.pop();
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(key.isNotEmpty
+                          ? 'Gemini API Key saved!'
+                          : 'Gemini API Key cleared.'),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Save Key'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isConfigured = EnvConfig.isGeminiApiKeyConfigured;
+
     return Column(
       children: [
         // Suggested Prompts Chips Bar
@@ -247,20 +320,49 @@ Please try again or select one of the suggested topics below!''',
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: _suggestedPrompts.map((prompt) {
-                return Padding(
+              children: [
+                Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ActionChip(
-                    backgroundColor: AppColors.surfaceContainerHigh,
-                    side: const BorderSide(color: AppColors.outlineVariant),
-                    label: Text(
-                      prompt,
-                      style: AppTypography.labelSmall.copyWith(fontSize: 11, color: AppColors.primary),
+                    avatar: Icon(
+                      Icons.key_outlined,
+                      size: 14,
+                      color: isConfigured ? const Color(0xFF2E7D32) : AppColors.error,
                     ),
-                    onPressed: () => _sendMessage(prompt),
+                    backgroundColor: isConfigured
+                        ? const Color(0xFFE8F5E9)
+                        : const Color(0xFFFFEBEE),
+                    side: BorderSide(
+                      color: isConfigured
+                          ? const Color(0xFFA5D6A7)
+                          : const Color(0xFFFFCDD2),
+                    ),
+                    label: Text(
+                      isConfigured ? 'API Key: Ready' : 'API Key: Set Up',
+                      style: AppTypography.labelSmall.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isConfigured ? const Color(0xFF2E7D32) : AppColors.error,
+                      ),
+                    ),
+                    onPressed: () => _showApiKeyDialog(context),
                   ),
-                );
-              }).toList(),
+                ),
+                ..._suggestedPrompts.map((prompt) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      backgroundColor: AppColors.surfaceContainerHigh,
+                      side: const BorderSide(color: AppColors.outlineVariant),
+                      label: Text(
+                        prompt,
+                        style: AppTypography.labelSmall.copyWith(fontSize: 11, color: AppColors.primary),
+                      ),
+                      onPressed: () => _sendMessage(prompt),
+                    ),
+                  );
+                }),
+              ],
             ),
           ),
         ),

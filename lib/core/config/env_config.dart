@@ -1,18 +1,49 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Centralized Environment Configuration Manager
 abstract class EnvConfig {
-  /// Load environment variables from .env file gracefully
+  static const String _prefsKey = 'custom_gemini_api_key';
+  static String _userCustomKey = '';
+
+  /// Load environment variables from .env file and SharedPreferences gracefully
   static Future<void> init() async {
     try {
       await dotenv.load(fileName: '.env');
-    } catch (_) {
-      // If .env file is missing or not packaged in assets, fallback safely
+      debugPrint('[EnvConfig] Loaded .env asset successfully.');
+    } catch (e) {
+      debugPrint('[EnvConfig] Could not load .env asset: $e');
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _userCustomKey = prefs.getString(_prefsKey)?.trim() ?? '';
+    } catch (e) {
+      debugPrint('[EnvConfig] Could not read SharedPreferences: $e');
     }
   }
 
+  /// Save user provided Gemini API Key to SharedPreferences
+  static Future<void> saveGeminiApiKey(String newKey) async {
+    _userCustomKey = newKey.trim();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKey, _userCustomKey);
+    } catch (e) {
+      debugPrint('[EnvConfig] Could not save API key to SharedPreferences: $e');
+    }
+  }
+
+  /// Check if a valid Gemini API key is configured
+  static bool get isGeminiApiKeyConfigured => geminiApiKey.isNotEmpty;
+
   /// Returns GEMINI_API_KEY safely without throwing NotInitializedError
   static String get geminiApiKey {
+    if (_userCustomKey.isNotEmpty) {
+      return _userCustomKey;
+    }
+
     try {
       if (dotenv.isInitialized) {
         final key = dotenv.env['GEMINI_API_KEY'];
@@ -28,3 +59,4 @@ abstract class EnvConfig {
     ).trim();
   }
 }
+

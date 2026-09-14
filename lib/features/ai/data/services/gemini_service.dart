@@ -20,11 +20,11 @@ class GeminiService {
               ),
             );
 
-  /// Target models in order of priority: gemini-2.5-flash primary, followed by fallbacks.
+  /// Target models in order of priority: gemini-2.0-flash primary, followed by fallbacks.
   static const List<String> _modelEndpoints = [
-    'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-1.5-flash',
+    'gemini-1.5-pro',
   ];
 
   /// Categorization keywords mapping merchant names and line items to MoneyMateX standard categories
