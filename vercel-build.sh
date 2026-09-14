@@ -6,6 +6,8 @@ echo "=== Installing Flutter SDK on Vercel ==="
 
 FLUTTER_VERSION="3.47.2"
 
+ROOT_DIR="$(pwd)"
+
 cd /tmp
 
 rm -rf flutter
@@ -19,6 +21,9 @@ tar -xf flutter.tar.xz
 
 export PATH="/tmp/flutter/bin:$PATH"
 
+# Allow git to access /tmp/flutter in Vercel environment
+git config --global --add safe.directory '*'
+
 echo "=== Flutter Location ==="
 which flutter
 
@@ -27,7 +32,7 @@ flutter --version
 
 echo "=== Getting Dependencies ==="
 
-cd /vercel/path0
+cd "$ROOT_DIR"
 
 flutter config --enable-web
 flutter config --no-analytics
