@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/env_config.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/services/web_ocr_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -58,6 +59,78 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     _discountController.dispose();
     _receiptNoController.dispose();
     super.dispose();
+  }
+
+  void _showApiKeySetupDialog(BuildContext context) {
+    final keyController = TextEditingController(text: EnvConfig.geminiApiKey);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.key_outlined, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text('Gemini API Key Settings'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter your Google Gemini API Key to enable AI receipt OCR scanning:',
+                style: AppTypography.bodyMedium.copyWith(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: keyController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Gemini API Key',
+                  hintText: 'AIzaSy...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Get your key free at aistudio.google.com',
+                style: AppTypography.labelSmall.copyWith(color: AppColors.primary, fontSize: 11),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                final key = keyController.text.trim();
+                await EnvConfig.saveGeminiApiKey(key);
+                if (mounted) {
+                  setState(() {
+                    _errorMessage = null;
+                  });
+                  navigator.pop();
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(key.isNotEmpty
+                          ? 'Gemini API Key saved! Try scanning again.'
+                          : 'Gemini API Key cleared.'),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Save Key'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   /// Step 1: Pick Image from Gallery or Camera
@@ -488,6 +561,21 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
                           _errorMessage!,
                           style: AppTypography.labelSmall.copyWith(color: AppColors.onTertiaryContainer, fontWeight: FontWeight.w600),
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.s)),
+                        ),
+                        icon: const Icon(Icons.key, size: 14, color: Colors.white),
+                        label: Text(
+                          'Setup Key',
+                          style: AppTypography.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
+                        onPressed: () => _showApiKeySetupDialog(context),
                       ),
                     ],
                   ),

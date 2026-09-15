@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Centralized Environment Configuration Manager
 abstract class EnvConfig {
   static const String _prefsKey = 'custom_gemini_api_key';
+  static const String _defaultFallbackKey = 'AIzaSyAv5RBcwYRaFeOAZhYQkJBJ4G2PhZaZ_WI';
   static String _userCustomKey = '';
 
   /// Load environment variables from .env file and SharedPreferences gracefully
@@ -53,10 +54,17 @@ abstract class EnvConfig {
       }
     } catch (_) {}
 
-    return const String.fromEnvironment(
+    final envDefineKey = const String.fromEnvironment(
       'GEMINI_API_KEY',
       defaultValue: '',
     ).trim();
+
+    if (envDefineKey.isNotEmpty) {
+      return envDefineKey;
+    }
+
+    return _defaultFallbackKey;
   }
 }
+
 
