@@ -233,6 +233,28 @@ class GeminiService {
       return ReceiptData.error('No receipt image selected.');
     }
 
+    // Try live Render backend service first (since GEMINI_API_KEY is configured on Render!)
+    try {
+      final backendResponse = await _dio.post(
+        'https://moneymatex-backend.onrender.com/api/v1/ocr/scan-receipt',
+        data: {'imageDataUrl': imageDataUrl},
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          sendTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+      if (backendResponse.statusCode == 200 && backendResponse.data != null) {
+        final data = backendResponse.data;
+        if (data is Map<String, dynamic> && (data['isSuccess'] == true || data['merchantName'] != null)) {
+          debugPrint('[RECEIPT] Successfully processed via Render backend');
+          return ReceiptData.fromJson(data, imageDataUrl: imageDataUrl);
+        }
+      }
+    } catch (e) {
+      debugPrint('[RECEIPT] Backend call skipped/failed: $e');
+    }
+
     final apiKey = EnvConfig.geminiApiKey;
     if (apiKey.isEmpty || !EnvConfig.hasValidCustomGeminiApiKey) {
       debugPrint('[RECEIPT] Placeholder or no API key set; using fast OCR fallback engine.');
