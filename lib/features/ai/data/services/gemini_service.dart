@@ -234,7 +234,8 @@ class GeminiService {
     }
 
     final apiKey = EnvConfig.geminiApiKey;
-    if (apiKey.isEmpty) {
+    if (apiKey.isEmpty || !EnvConfig.hasValidCustomGeminiApiKey) {
+      debugPrint('[RECEIPT] Placeholder or no API key set; using fast OCR fallback engine.');
       return await _fallbackToWebOcr(imageDataUrl);
     }
 
@@ -398,7 +399,8 @@ Rules:
     }
 
     final apiKey = EnvConfig.geminiApiKey;
-    if (apiKey.isEmpty) {
+    if (apiKey.isEmpty || !EnvConfig.hasValidCustomGeminiApiKey) {
+      debugPrint('[UPI SCANNER] Placeholder or no API key set; using fast OCR fallback engine.');
       return await _fallbackToUpiWebOcr(imageDataUrl);
     }
 

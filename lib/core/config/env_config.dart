@@ -39,6 +39,12 @@ abstract class EnvConfig {
   /// Check if a valid Gemini API key is configured
   static bool get isGeminiApiKeyConfigured => geminiApiKey.isNotEmpty;
 
+  /// Returns true only if a real user key is set (and not the placeholder)
+  static bool get hasValidCustomGeminiApiKey {
+    final key = geminiApiKey;
+    return key.isNotEmpty && key != _defaultFallbackKey;
+  }
+
   /// Returns GEMINI_API_KEY safely without throwing NotInitializedError
   static String get geminiApiKey {
     if (_userCustomKey.isNotEmpty) {
