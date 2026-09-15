@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/config/env_config.dart';
+import '../../../../core/services/web_ocr_service.dart';
 import '../../../transactions/domain/entities/transaction_entity.dart';
 import '../../domain/models/receipt_data.dart';
 import '../../domain/models/scanned_upi.dart';
@@ -234,7 +235,7 @@ class GeminiService {
 
     final apiKey = EnvConfig.geminiApiKey;
     if (apiKey.isEmpty) {
-      return ReceiptData.error('Gemini API key is not configured.');
+      return await _fallbackToWebOcr(imageDataUrl);
     }
 
     debugPrint('[RECEIPT] Image selected');
@@ -300,21 +301,6 @@ Rules:
       ],
       'generationConfig': {
         'responseMimeType': 'application/json',
-        'responseSchema': {
-          'type': 'OBJECT',
-          'properties': {
-            'merchantName': {'type': 'STRING'},
-            'date': {'type': 'STRING'},
-            'totalAmount': {'type': 'NUMBER'},
-            'taxAmount': {'type': 'NUMBER', 'nullable': true},
-            'currency': {'type': 'STRING'},
-            'subtotal': {'type': 'NUMBER', 'nullable': true},
-            'discount': {'type': 'NUMBER', 'nullable': true},
-            'receiptNumber': {'type': 'STRING', 'nullable': true},
-            'paymentMethod': {'type': 'STRING'}
-          },
-          'required': ['merchantName', 'date', 'totalAmount']
-        }
       }
     };
 
@@ -363,10 +349,39 @@ Rules:
       }
     }
 
-    return ReceiptData.error(
-      'We couldn\'t read the receipt details. Please try again with a clearer image.',
-      imageDataUrl: imageDataUrl,
-    );
+    return await _fallbackToWebOcr(imageDataUrl);
+  }
+
+  /// Fallback parser using local OCR engine if API call fails
+  Future<ReceiptData> _fallbackToWebOcr(String imageDataUrl) async {
+    try {
+      final ocr = await WebOcrService.processReceiptImage(imageDataUrl);
+      final double? parsedAmount = double.tryParse(ocr.amount);
+      final String merchantName = ocr.merchant.isNotEmpty ? ocr.merchant : 'Receipt Expense';
+      final String detectedCat = autoDetectCategory(merchantName, gCategory: ocr.category);
+
+      final now = DateTime.now();
+      final dateStr = ocr.date.isNotEmpty
+          ? ocr.date
+          : '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      return ReceiptData(
+        merchantName: merchantName,
+        date: DateTime.tryParse(dateStr) ?? DateTime.now(),
+        dateString: dateStr,
+        totalAmount: parsedAmount,
+        currency: '₹',
+        paymentMethod: ocr.paymentMethod.isNotEmpty ? ocr.paymentMethod : 'UPI',
+        suggestedCategory: detectedCat,
+        isSuccess: true,
+        imageDataUrl: imageDataUrl,
+      );
+    } catch (_) {
+      return ReceiptData.error(
+        'We couldn\'t read the receipt details. Please try again with a clearer image.',
+        imageDataUrl: imageDataUrl,
+      );
+    }
   }
 
   /// B. UPI SCREENSHOT SCANNER: parseUpiScreenshot(base64Image)
@@ -377,7 +392,7 @@ Rules:
 
     final apiKey = EnvConfig.geminiApiKey;
     if (apiKey.isEmpty) {
-      return ScannedUPI.error('Gemini API key is not configured.');
+      return await _fallbackToUpiWebOcr(imageDataUrl);
     }
 
     final String mimeType = detectMimeType(imageDataUrl);
@@ -427,16 +442,6 @@ Rules:
       ],
       'generationConfig': {
         'responseMimeType': 'application/json',
-        'responseSchema': {
-          'type': 'OBJECT',
-          'properties': {
-            'paidAmount': {'type': 'NUMBER'},
-            'receiverName': {'type': 'STRING'},
-            'dateTime': {'type': 'STRING'},
-            'transactionId': {'type': 'STRING', 'nullable': true}
-          },
-          'required': ['paidAmount', 'receiverName']
-        }
       }
     };
 
@@ -476,10 +481,37 @@ Rules:
       }
     }
 
-    return ScannedUPI.error(
-      'Unable to scan this UPI payment screenshot. Please use a clearer screenshot.',
-      imageDataUrl: imageDataUrl,
-    );
+    return await _fallbackToUpiWebOcr(imageDataUrl);
+  }
+
+  /// Fallback parser for UPI screenshots using local OCR engine
+  Future<ScannedUPI> _fallbackToUpiWebOcr(String imageDataUrl) async {
+    try {
+      final ocr = await WebOcrService.processReceiptImage(imageDataUrl);
+      final double? parsedAmount = double.tryParse(ocr.amount);
+      final String receiver = ocr.merchant.isNotEmpty ? ocr.merchant : 'UPI Merchant';
+      final String detectedCat = autoDetectCategory(receiver, gCategory: ocr.category);
+
+      final now = DateTime.now();
+      final dateStr = ocr.date.isNotEmpty
+          ? ocr.date
+          : '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      return ScannedUPI(
+        paidAmount: parsedAmount,
+        receiverName: receiver,
+        dateTime: DateTime.tryParse(dateStr) ?? DateTime.now(),
+        dateTimeString: dateStr,
+        suggestedCategory: detectedCat,
+        isSuccess: true,
+        imageDataUrl: imageDataUrl,
+      );
+    } catch (_) {
+      return ScannedUPI.error(
+        'Unable to scan this UPI payment screenshot. Please try again with a clearer image.',
+        imageDataUrl: imageDataUrl,
+      );
+    }
   }
 
   /// C. SPENDING INSIGHTS: getSpendingInsights(expenses)
