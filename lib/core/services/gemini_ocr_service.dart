@@ -90,45 +90,43 @@ class GeminiOcrService {
       debugPrint('[GEMINI OCR DEBUG] Base64 Preview: ${cleanBase64.length > 50 ? cleanBase64.substring(0, 50) : cleanBase64}...');
       debugPrint('[GEMINI OCR DEBUG] Detected Mime Type: $mimeType');
 
-      // 2. Build Gemini 2.0 Flash Request Payload
-      const String promptText = '''
-You are an expert financial receipt, bill, and transport ticket OCR parser.
-Analyze the provided image of a receipt, bill, or transport ticket (e.g., retail receipt, bus/train ticket, taxi receipt).
-
-Extract the following fields and return ONLY a raw JSON object with NO markdown code fences, NO triple backticks, and NO explanatory text.
-
-JSON object schema:
-{
-  "merchant": "Vendor, store, restaurant, or transport company name (string)",
-  "amount": "Total transaction amount as a numeric string or number with NO currency symbols or commas (e.g. 19.00)",
-  "date": "Transaction date in YYYY-MM-DD format (string)",
-  "category": "Auto-classify into EXACTLY ONE of: Food & Dining, Transport, Shopping, Bills & Utilities, Entertainment, Other (string)",
-  "payment_method": "EXACTLY ONE of: Cash, UPI, Card, Unknown (string)",
-  "is_ticket": "boolean true if the document is a transport ticket (bus/train/flight/taxi ticket), else false",
-  "route_from": "Departure city or station name if this is a transport ticket, else null",
-  "route_to": "Arrival city or station name if this is a transport ticket, else null",
-  "ticket_no": "Ticket number, PNR, or booking reference if this is a transport ticket, else null"
-}
-
-CRITICAL: Return strictly valid JSON only.
-''';
+      // 2. Build Gemini request with responseSchema (matching @google/genai SDK methodology)
+      const String promptText = 'Extract receipt/ticket data into raw JSON: merchant, amount (numeric string), date (YYYY-MM-DD), category (Food & Dining/Transport/Shopping/Bills & Utilities/Entertainment/Other), payment_method (Cash/UPI/Card/Unknown), is_ticket (boolean), route_from, route_to, ticket_no.';
 
       final requestBody = {
         'contents': [
           {
             'parts': [
               {
-                'text': promptText,
-              },
-              {
                 'inline_data': {
                   'mime_type': mimeType,
                   'data': cleanBase64,
                 }
-              }
+              },
+              {
+                'text': promptText,
+              },
             ]
           }
-        ]
+        ],
+        'generationConfig': {
+          'responseMimeType': 'application/json',
+          'responseSchema': {
+            'type': 'OBJECT',
+            'properties': {
+              'merchant': {'type': 'STRING'},
+              'amount': {'type': 'STRING'},
+              'date': {'type': 'STRING'},
+              'category': {'type': 'STRING'},
+              'payment_method': {'type': 'STRING'},
+              'is_ticket': {'type': 'BOOLEAN'},
+              'route_from': {'type': 'STRING', 'nullable': true},
+              'route_to': {'type': 'STRING', 'nullable': true},
+              'ticket_no': {'type': 'STRING', 'nullable': true},
+            },
+            'required': ['merchant', 'amount', 'date', 'category', 'payment_method', 'is_ticket'],
+          },
+        }
       };
 
       // Try primary gemini-3.6-flash model endpoint, followed by fallbacks
@@ -147,6 +145,8 @@ CRITICAL: Return strictly valid JSON only.
             data: requestBody,
             options: Options(
               headers: {'Content-Type': 'application/json'},
+              sendTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 12),
             ),
           );
 

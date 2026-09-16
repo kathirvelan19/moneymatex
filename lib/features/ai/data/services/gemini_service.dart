@@ -8,7 +8,8 @@ import '../../domain/models/receipt_data.dart';
 import '../../domain/models/scanned_upi.dart';
 
 /// MoneyMateX Gemini AI Service
-/// Ports the reference React implementation behavior into Flutter using Gemini 2.5 Flash API.
+/// Ports the reference @google/genai SDK methodology into Flutter using Gemini REST API.
+/// Uses responseSchema for typed structured JSON output (matching TypeScript SDK approach).
 class GeminiService {
   final Dio _dio;
 
@@ -21,12 +22,12 @@ class GeminiService {
               ),
             );
 
-  /// Target models in order of priority: standard stable models followed by fallbacks.
+  /// Target models in order of priority: gemini-3.6-flash primary (matching TypeScript SDK reference).
   static const List<String> _modelEndpoints = [
+    'gemini-3.6-flash',
     'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-1.5-flash',
-    'gemini-3.6-flash',
     'gemini-1.5-pro',
   ];
 
@@ -245,53 +246,39 @@ class GeminiService {
     final apiKey = EnvConfig.geminiApiKey;
     debugPrint('[RECEIPT] Image ready for Gemini scan. Base64 len: ${cleanBase64.length}, Mime: $mimeType, Key present: ${apiKey.isNotEmpty}');
 
-    // 1. Direct Gemini API Call (gemini-3.6-flash -> gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash)
+    // 1. Direct Gemini API Call with responseSchema (matching @google/genai SDK methodology)
     if (apiKey.isNotEmpty) {
-      const String promptText = '''
-You are an expert financial receipt, bill, and invoice OCR extraction engine.
-Analyze the provided receipt image.
-
-Extract exact merchant name, total transaction amount paid, transaction date, tax amount, and individual items if visible.
-
-Return ONLY a raw JSON object with NO markdown fences, NO triple backticks, and NO explanatory text.
-
-JSON Schema:
-{
-  "merchantName": "Merchant, restaurant, or store name (e.g. McDonald's, Starbucks, Swiggy)",
-  "date": "YYYY-MM-DD",
-  "totalAmount": 8.00,
-  "taxAmount": 0.00,
-  "currency": "₹",
-  "subtotal": null,
-  "discount": null,
-  "receiptNumber": null,
-  "paymentMethod": "UPI",
-  "suggestedCategory": "Food & Dining",
-  "items": []
-}
-
-Rules:
-- Preserve exact merchant name and exact total amount (number only, e.g. 8 for 8 rupees).
-- Do not guess missing numbers.
-- Return raw valid JSON only.
-''';
+      const String promptText = 'Extract receipt data into raw JSON (no markdown): merchantName, date (YYYY-MM-DD), totalAmount, taxAmount, currency, paymentMethod, suggestedCategory.';
 
       final requestBody = {
         'contents': [
           {
             'parts': [
-              {'text': promptText},
               {
                 'inline_data': {
                   'mime_type': mimeType,
                   'data': cleanBase64,
                 }
-              }
+              },
+              {'text': promptText},
             ]
           }
         ],
         'generationConfig': {
           'responseMimeType': 'application/json',
+          'responseSchema': {
+            'type': 'OBJECT',
+            'properties': {
+              'merchantName': {'type': 'STRING'},
+              'date': {'type': 'STRING'},
+              'totalAmount': {'type': 'NUMBER'},
+              'taxAmount': {'type': 'NUMBER', 'nullable': true},
+              'currency': {'type': 'STRING'},
+              'paymentMethod': {'type': 'STRING', 'nullable': true},
+              'suggestedCategory': {'type': 'STRING', 'nullable': true},
+            },
+            'required': ['merchantName', 'date', 'totalAmount'],
+          },
         }
       };
 
@@ -427,46 +414,34 @@ Rules:
       return ScannedUPI.error('Invalid screenshot image format.');
     }
 
-    const String promptText = '''
-Analyze this UPI payment screenshot.
-
-Extract only information clearly visible in the screenshot.
-
-Return ONLY valid JSON.
-
-Fields:
-
-paidAmount
-receiverName
-dateTime
-transactionId
-
-Rules:
-
-- Do not guess missing values.
-- Preserve the exact receiver name when possible.
-- Preserve the transaction amount accurately.
-- Return null for unavailable fields.
-- Return JSON only.
-- Do not return markdown or explanations.
-''';
+    const String promptText = 'Extract UPI data into raw JSON (no markdown): paidAmount, receiverName, dateTime, transactionId.';
 
     final requestBody = {
       'contents': [
         {
           'parts': [
-            {'text': promptText},
             {
               'inline_data': {
                 'mime_type': mimeType,
                 'data': cleanBase64,
               }
-            }
+            },
+            {'text': promptText},
           ]
         }
       ],
       'generationConfig': {
         'responseMimeType': 'application/json',
+        'responseSchema': {
+          'type': 'OBJECT',
+          'properties': {
+            'paidAmount': {'type': 'NUMBER'},
+            'receiverName': {'type': 'STRING'},
+            'dateTime': {'type': 'STRING'},
+            'transactionId': {'type': 'STRING'},
+          },
+          'required': ['paidAmount', 'receiverName'],
+        },
       }
     };
 
@@ -477,7 +452,11 @@ Rules:
         final response = await _dio.post(
           endpointUrl,
           data: requestBody,
-          options: Options(headers: {'Content-Type': 'application/json'}),
+          options: Options(
+            headers: {'Content-Type': 'application/json'},
+            sendTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 12),
+          ),
         );
 
         if (response.statusCode == 200 && response.data != null) {
@@ -567,28 +546,7 @@ Rules:
           'date': '${e.date.year}-${e.date.month.toString().padLeft(2, '0')}-${e.date.day.toString().padLeft(2, '0')}',
         }).toList();
 
-    final String promptText = '''
-Analyze the following MoneyMateX expense data:
-
-${jsonEncode(recentExpenses)}
-
-Identify useful spending patterns.
-
-Return ONLY valid JSON:
-
-{
-  "insights": []
-}
-
-Rules:
-
-- Keep insights concise and understandable.
-- Mention meaningful spending patterns only.
-- Do not invent financial facts.
-- Do not provide investment advice.
-- Do not make unsupported assumptions.
-- Return an empty array when there is insufficient data.
-''';
+    final String promptText = 'Analyze these expenses. Return a raw JSON object with an array of strings under the key "insights". Data: ${jsonEncode(recentExpenses)}';
 
     final requestBody = {
       'contents': [
@@ -600,6 +558,16 @@ Rules:
       ],
       'generationConfig': {
         'responseMimeType': 'application/json',
+        'responseSchema': {
+          'type': 'OBJECT',
+          'properties': {
+            'insights': {
+              'type': 'ARRAY',
+              'items': {'type': 'STRING'},
+            },
+          },
+          'required': ['insights'],
+        },
       }
     };
 
@@ -610,7 +578,11 @@ Rules:
         final response = await _dio.post(
           endpointUrl,
           data: requestBody,
-          options: Options(headers: {'Content-Type': 'application/json'}),
+          options: Options(
+            headers: {'Content-Type': 'application/json'},
+            sendTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 12),
+          ),
         );
 
         if (response.statusCode == 200 && response.data != null) {
