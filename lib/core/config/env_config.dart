@@ -39,10 +39,10 @@ abstract class EnvConfig {
   /// Check if a valid Gemini API key is configured
   static bool get isGeminiApiKeyConfigured => geminiApiKey.isNotEmpty;
 
-  /// Returns true only if a real user key is set (and not the placeholder)
+  /// Returns true whenever a Gemini API key is present
   static bool get hasValidCustomGeminiApiKey {
     final key = geminiApiKey;
-    return key.isNotEmpty && key != _defaultFallbackKey;
+    return key.isNotEmpty;
   }
 
   /// Returns GEMINI_API_KEY safely without throwing NotInitializedError
@@ -54,7 +54,10 @@ abstract class EnvConfig {
     try {
       if (dotenv.isInitialized) {
         final key = dotenv.env['GEMINI_API_KEY'];
-        if (key != null && key.trim().isNotEmpty) {
+        if (key != null &&
+            key.trim().isNotEmpty &&
+            !key.contains('your_gemini_api_key_here') &&
+            !key.contains('your_key_here')) {
           return key.trim();
         }
       }
@@ -65,7 +68,7 @@ abstract class EnvConfig {
       defaultValue: '',
     ).trim();
 
-    if (envDefineKey.isNotEmpty) {
+    if (envDefineKey.isNotEmpty && !envDefineKey.contains('your_gemini_api_key_here')) {
       return envDefineKey;
     }
 

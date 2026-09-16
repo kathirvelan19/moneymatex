@@ -48,13 +48,16 @@ flutter pub get
 
 echo "=== Building Flutter Web ==="
 
+DART_DEFINES=""
+
 if [ -n "$API_BASE_URL" ]; then
-    flutter build web --release \
-      --no-tree-shake-icons \
-      --dart-define=API_BASE_URL="$API_BASE_URL"
-else
-    flutter build web --release \
-      --no-tree-shake-icons
+    DART_DEFINES="$DART_DEFINES --dart-define=API_BASE_URL=$API_BASE_URL"
 fi
+
+if [ -n "$GEMINI_API_KEY" ]; then
+    DART_DEFINES="$DART_DEFINES --dart-define=GEMINI_API_KEY=$GEMINI_API_KEY"
+fi
+
+flutter build web --release --no-tree-shake-icons $DART_DEFINES
 
 echo "=== Build Completed Successfully ==="
