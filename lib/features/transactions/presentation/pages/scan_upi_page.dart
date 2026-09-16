@@ -16,7 +16,7 @@ import '../../../ai/presentation/providers/ai_providers.dart';
 import '../../domain/entities/transaction_entity.dart';
 import '../providers/transactions_provider.dart';
 
-/// Multimodal UPI Screenshot Scanner Screen powered by Gemini 2.5 Flash AI
+/// Multimodal UPI Screenshot Scanner Screen powered by Gemini 3.6 Flash AI
 class ScanUpiPage extends ConsumerStatefulWidget {
   const ScanUpiPage({super.key});
 

@@ -21,8 +21,10 @@ class GeminiService {
               ),
             );
 
-  /// Target models in order of priority: gemini-2.0-flash primary, followed by fallbacks.
+  /// Target models in order of priority: gemini-3.6-flash primary, followed by fallbacks.
   static const List<String> _modelEndpoints = [
+    'gemini-3.6-flash',
+    'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-1.5-flash',
     'gemini-1.5-pro',

@@ -131,8 +131,10 @@ CRITICAL: Return strictly valid JSON only.
         ]
       };
 
-      // Try primary gemini-2.0-flash model endpoint, then secondary gemini-1.5-flash endpoint
+      // Try primary gemini-3.6-flash model endpoint, followed by fallbacks
       final endpoints = [
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=$apiKey',
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey',
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey',
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey',
       ];

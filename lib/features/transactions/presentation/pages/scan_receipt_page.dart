@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,19 +6,15 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/config/env_config.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/services/web_ocr_service.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/mm_button.dart';
 import '../../../../core/widgets/mm_chip.dart';
-import '../../../../core/widgets/mm_text_field.dart';
 import '../../../ai/domain/models/receipt_data.dart';
 import '../../../ai/presentation/providers/ai_providers.dart';
 import '../../domain/entities/transaction_entity.dart';
 import '../providers/transactions_provider.dart';
 
-/// Multimodal Receipt Scanner Screen powered by Gemini 2.5 Flash AI
+/// Professional AI Receipt Scanner Screen matching Gemini Vision methodology & UI specification
 class ScanReceiptPage extends ConsumerStatefulWidget {
   const ScanReceiptPage({super.key});
 
@@ -30,7 +27,7 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
   bool _hasScanned = false;
   String? _selectedImageDataUrl;
   String? _errorMessage;
-  String _loadingStepText = 'Analyzing receipt...';
+  String _loadingStepText = 'Analyzing with Gemini AI...';
 
   ReceiptData? _extractedReceipt;
   List<ReceiptItem> _extractedItems = [];
@@ -38,12 +35,25 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
   final TextEditingController _merchantController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _categoryController = TextEditingController();
-  final TextEditingController _paymentMethodController = TextEditingController();
   final TextEditingController _taxController = TextEditingController();
   final TextEditingController _subtotalController = TextEditingController();
   final TextEditingController _discountController = TextEditingController();
   final TextEditingController _receiptNoController = TextEditingController();
+
+  String _selectedCategory = 'Travel';
+  String _selectedPaymentMethod = 'UPI';
+
+  final List<String> _categories = [
+    'Travel',
+    'Food & Dining',
+    'Shopping',
+    'Bills & Utilities',
+    'Transport',
+    'Entertainment',
+    'Health & Wellness',
+    'Housing & Rent',
+    'Other'
+  ];
 
   bool _isItemsExpanded = false;
 
@@ -52,8 +62,6 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     _merchantController.dispose();
     _amountController.dispose();
     _dateController.dispose();
-    _categoryController.dispose();
-    _paymentMethodController.dispose();
     _taxController.dispose();
     _subtotalController.dispose();
     _discountController.dispose();
@@ -70,7 +78,7 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Row(
             children: [
-              Icon(Icons.key_outlined, color: AppColors.primary),
+              Icon(Icons.key_outlined, color: Color(0xFF6C38FF)),
               SizedBox(width: 8),
               Text('Gemini API Key Settings'),
             ],
@@ -96,7 +104,7 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
               const SizedBox(height: 8),
               Text(
                 'Get your key free at aistudio.google.com',
-                style: AppTypography.labelSmall.copyWith(color: AppColors.primary, fontSize: 11),
+                style: AppTypography.labelSmall.copyWith(color: const Color(0xFF6C38FF), fontSize: 11),
               ),
             ],
           ),
@@ -106,6 +114,10 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C38FF),
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
@@ -153,6 +165,9 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
         _extractedReceipt = null;
         _errorMessage = null;
       });
+
+      // Auto trigger analysis
+      _processReceiptWithGemini();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -162,7 +177,7 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     }
   }
 
-  /// Step 2: User taps "Scan Receipt" to trigger Gemini 2.5 Flash API
+  /// Step 2: User triggers Gemini 3.6 Flash / 2.5 Flash API
   Future<void> _processReceiptWithGemini() async {
     if (_selectedImageDataUrl == null || _selectedImageDataUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -174,24 +189,7 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     setState(() {
       _isProcessing = true;
       _errorMessage = null;
-      _loadingStepText = 'Analyzing receipt...';
-    });
-
-    // Step animation feedback
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted && _isProcessing) {
-        setState(() => _loadingStepText = 'Extracting merchant & date...');
-      }
-    });
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted && _isProcessing) {
-        setState(() => _loadingStepText = 'Reading total amount & tax...');
-      }
-    });
-    Future.delayed(const Duration(milliseconds: 1800), () {
-      if (mounted && _isProcessing) {
-        setState(() => _loadingStepText = 'Detecting category with MoneyMateX AI...');
-      }
+      _loadingStepText = 'Analyzing with Gemini AI...';
     });
 
     try {
@@ -206,17 +204,28 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
 
           if (receipt.isSuccess) {
             _merchantController.text = receipt.merchantName ?? '';
-            _amountController.text = receipt.totalAmount != null ? receipt.totalAmount!.toStringAsFixed(2) : '';
+            _amountController.text = receipt.totalAmount != null
+                ? (receipt.totalAmount! % 1 == 0
+                    ? receipt.totalAmount!.toInt().toString()
+                    : receipt.totalAmount!.toStringAsFixed(2))
+                : '';
 
             final now = DateTime.now();
             final dateStr = receipt.dateString ??
                 (receipt.date != null
-                    ? '${receipt.date!.year}-${receipt.date!.month.toString().padLeft(2, '0')}-${receipt.date!.day.toString().padLeft(2, '0')}'
-                    : '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}');
+                    ? '${receipt.date!.day.toString().padLeft(2, '0')}-${receipt.date!.month.toString().padLeft(2, '0')}-${receipt.date!.year}'
+                    : '${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}');
             _dateController.text = dateStr;
 
-            _categoryController.text = receipt.suggestedCategory;
-            _paymentMethodController.text = receipt.paymentMethod ?? 'UPI';
+            if (receipt.suggestedCategory.isNotEmpty && _categories.contains(receipt.suggestedCategory)) {
+              _selectedCategory = receipt.suggestedCategory;
+            } else if (receipt.suggestedCategory == 'Transport') {
+              _selectedCategory = 'Travel';
+            } else {
+              _selectedCategory = 'Travel';
+            }
+
+            _selectedPaymentMethod = receipt.paymentMethod ?? 'UPI';
             _taxController.text = receipt.taxAmount != null ? receipt.taxAmount!.toStringAsFixed(2) : '';
             _subtotalController.text = receipt.subtotal != null ? receipt.subtotal!.toStringAsFixed(2) : '';
             _discountController.text = receipt.discount != null ? receipt.discount!.toStringAsFixed(2) : '';
@@ -237,13 +246,39 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     }
   }
 
+  /// Date Picker Dialog Handler
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF6C38FF),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF0F172A),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _dateController.text =
+            '${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}';
+      });
+    }
+  }
+
   /// Step 3: Confirm and save expense into transactions repository
   void _confirmTransaction() {
     final amountText = _amountController.text.trim();
     final merchantText = _merchantController.text.trim();
-    final categoryText = _categoryController.text.trim();
     final dateText = _dateController.text.trim();
-    final paymentMethodText = _paymentMethodController.text.trim();
 
     final parsedAmount = double.tryParse(amountText.replaceAll('₹', '').replaceAll(',', '')) ?? 0.0;
     if (parsedAmount <= 0) {
@@ -254,8 +289,24 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     }
 
     final merchantName = merchantText.isNotEmpty ? merchantText : 'Receipt Expense';
-    final categoryName = categoryText.isNotEmpty ? categoryText : 'Uncategorized';
-    final paymentName = paymentMethodText.isNotEmpty ? paymentMethodText : 'UPI';
+    final categoryName = _selectedCategory;
+
+    // Parse date safely
+    DateTime parsedDate = DateTime.now();
+    try {
+      if (dateText.contains('-')) {
+        final parts = dateText.split('-');
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            // YYYY-MM-DD
+            parsedDate = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+          } else {
+            // DD-MM-YYYY
+            parsedDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+          }
+        }
+      }
+    } catch (_) {}
 
     final newItem = TransactionItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -263,8 +314,8 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
       category: categoryName,
       amount: parsedAmount,
       wallet: 'Main Account',
-      paymentMethod: paymentName,
-      date: DateTime.tryParse(dateText) ?? DateTime.now(),
+      paymentMethod: _selectedPaymentMethod,
+      date: parsedDate,
       isExpense: true,
       icon: TransactionsNotifier.getCategoryIcon(categoryName),
       source: 'gemini_receipt_ocr',
@@ -289,13 +340,13 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: const Color(0xFFFAFAFC),
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: const Color(0xFFFAFAFC),
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -305,396 +356,653 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
           },
         ),
         title: Text(
-          'Scan Receipt',
-          style: AppTypography.headlineMedium.copyWith(fontSize: 20, fontWeight: FontWeight.bold),
+          'Receipt Scanner',
+          style: AppTypography.headlineMedium.copyWith(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF0F172A),
+          ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.m),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Take a photo or choose an image. Gemini 2.5 Flash AI will automatically analyze your receipt and extract details.',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.m),
-
-            // Mode Selector
-            Row(
-              children: [
-                MMCategoryChip(
-                  label: 'Receipt Scanner',
-                  isSelected: true,
-                  onSelected: () {},
-                ),
-                const SizedBox(width: AppSpacing.s),
-                MMCategoryChip(
-                  label: 'UPI Screenshot Scanner',
-                  isSelected: false,
-                  onSelected: () => context.go(AppRoutes.scanUpi),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.l),
-
-            // Receipt Viewfinder / Preview Container
+            // Outer Professional Container Card
             Container(
-              height: 260,
-              width: double.infinity,
-              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                border: Border.all(color: AppColors.primary, width: 2),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_selectedImageDataUrl != null && _selectedImageDataUrl!.isNotEmpty)
-                    Positioned.fill(
-                      child: Image.network(
-                        _selectedImageDataUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.receipt_long, size: 64, color: AppColors.primary),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Receipt Loaded',
-                                  style: AppTypography.headlineMedium.copyWith(color: Colors.white, fontSize: 16),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    )
-                  else
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_outlined,
-                          size: 64,
-                          color: Colors.white.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Scan your receipt',
-                          style: AppTypography.headlineMedium.copyWith(color: Colors.white, fontSize: 18),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Take a photo or choose an image below',
-                          style: AppTypography.bodyMedium.copyWith(color: Colors.white.withValues(alpha: 0.7)),
-                        ),
-                      ],
-                    ),
-
-                  // Target Box Border
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.8), width: 2),
-                      borderRadius: BorderRadius.circular(AppRadius.m),
-                    ),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFEEF2F6), width: 1.5),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 20,
+                    offset: Offset(0, 4),
                   ),
-
-                  if (_selectedImageDataUrl != null && _selectedImageDataUrl!.isNotEmpty && !_isProcessing && !_hasScanned)
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                ],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row: Receipt AI Scanner
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.75),
-                          borderRadius: BorderRadius.circular(AppRadius.full),
+                          color: const Color(0xFFF3E8FF),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(
-                          'Receipt Preview',
-                          style: AppTypography.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                        child: const Icon(
+                          Icons.description_outlined,
+                          color: Color(0xFF7C3AED),
+                          size: 24,
                         ),
                       ),
-                    ),
-
-                  // Polished Loading Overlay with step messages
-                  if (_isProcessing)
-                    Container(
-                      color: Colors.black.withValues(alpha: 0.88),
-                      child: Center(
+                      const SizedBox(width: 14),
+                      Expanded(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const CircularProgressIndicator(color: AppColors.primary),
-                            const SizedBox(height: AppSpacing.l),
                             Text(
-                              _loadingStepText,
-                              style: AppTypography.headlineMedium.copyWith(color: Colors.white, fontSize: 16),
+                              'Receipt AI Scanner',
+                              style: AppTypography.headlineMedium.copyWith(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 2),
                             Text(
-                              'Gemini 2.5 Flash AI Engine',
-                              style: AppTypography.labelSmall.copyWith(color: AppColors.primary),
+                              'Upload paper or digital receipts for auto-extraction',
+                              style: AppTypography.bodyMedium.copyWith(
+                                fontSize: 13,
+                                color: const Color(0xFF64748B),
+                              ),
                             ),
                           ],
                         ),
                       ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Mode Selector Chips
+                  Row(
+                    children: [
+                      MMCategoryChip(
+                        label: 'Receipt Scanner',
+                        isSelected: true,
+                        onSelected: () {},
+                      ),
+                      const SizedBox(width: AppSpacing.s),
+                      MMCategoryChip(
+                        label: 'UPI Screenshot Scanner',
+                        isSelected: false,
+                        onSelected: () => context.go(AppRoutes.scanUpi),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Upload Zone or Preview Card
+                  if (_selectedImageDataUrl == null) ...[
+                    // Dashed Upload Zone Box
+                    InkWell(
+                      onTap: () => _handleImageSelection(isCamera: false),
+                      borderRadius: BorderRadius.circular(16),
+                      child: CustomPaint(
+                        painter: _DashedRectPainter(
+                          color: const Color(0xFFCBD5E1),
+                          strokeWidth: 1.5,
+                          gap: 6.0,
+                          radius: 16.0,
+                        ),
+                        child: Container(
+                          width: double.infinity,
+                          height: 170,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x08000000),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 2),
+                                    )
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.cloud_upload_outlined,
+                                  color: Color(0xFF475569),
+                                  size: 26,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Click to upload or drag receipt image',
+                                style: AppTypography.headlineMedium.copyWith(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'PNG, JPG, JPEG up to 5MB',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  fontSize: 12,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
+                  ] else ...[
+                    // Image Preview Container Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Receipt Image Card Preview Frame
+                          Container(
+                            height: 200,
+                            constraints: const BoxConstraints(maxWidth: 160),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x1A000000),
+                                  blurRadius: 16,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                              border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Image.network(
+                              _selectedImageDataUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Center(
+                                  child: Icon(Icons.receipt_long, size: 64, color: Color(0xFF7C3AED)),
+                                );
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          // Analyzing / Scan Button
+                          if (_isProcessing) ...[
+                            SizedBox(
+                              width: 260,
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                onPressed: null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF9361FF),
+                                  disabledBackgroundColor: const Color(0xFF9361FF),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                icon: const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.2,
+                                  ),
+                                ),
+                                label: Text(
+                                  _loadingStepText,
+                                  style: AppTypography.headlineMedium.copyWith(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            SizedBox(
+                              width: 280,
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                onPressed: _processReceiptWithGemini,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF6C38FF),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+                                label: Text(
+                                  'Scan & Extract Receipt Data',
+                                  style: AppTypography.headlineMedium.copyWith(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: () => _handleImageSelection(isCamera: false),
+                              icon: const Icon(Icons.refresh, size: 14, color: Color(0xFF64748B)),
+                              label: Text(
+                                'Change Image',
+                                style: AppTypography.labelSmall.copyWith(color: const Color(0xFF64748B)),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Extracted Details Form Section
+                  if (_hasScanned && !_isProcessing) ...[
+                    const SizedBox(height: 24),
+                    const Divider(color: Color(0xFFE2E8F0)),
+                    const SizedBox(height: 16),
+
+                    // Extracted Details Pill Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEDE9FE),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'EXTRACTED DETAILS',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: const Color(0xFF6D28D9),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    if (_errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFFCA5A5)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: AppTypography.labelSmall.copyWith(color: const Color(0xFF991B1B), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => _showApiKeySetupDialog(context),
+                              child: const Text('Setup Key', style: TextStyle(color: Color(0xFF6C38FF), fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // 2-Column Responsive Form Layout
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        bool isWide = constraints.maxWidth > 500;
+
+                        final merchantField = _buildFormField(
+                          label: 'MERCHANT',
+                          child: _buildCustomTextField(
+                            controller: _merchantController,
+                            hint: 'Store, Restaurant or Vendor name',
+                          ),
+                        );
+
+                        final amountField = _buildFormField(
+                          label: 'AMOUNT (₹)',
+                          child: _buildCustomTextField(
+                            controller: _amountController,
+                            hint: '0.00',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          ),
+                        );
+
+                        final dateField = _buildFormField(
+                          label: 'DATE',
+                          child: InkWell(
+                            onTap: () => _selectDate(context),
+                            child: _buildCustomTextField(
+                              controller: _dateController,
+                              hint: 'DD-MM-YYYY',
+                              readOnly: true,
+                              trailingIcon: Icons.calendar_today_outlined,
+                              onTrailingTap: () => _selectDate(context),
+                            ),
+                          ),
+                        );
+
+                        final categoryField = _buildFormField(
+                          label: 'CATEGORY',
+                          child: Container(
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedCategory,
+                                isExpanded: true,
+                                icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF64748B)),
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: const Color(0xFF0F172A),
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                                items: _categories.map((String cat) {
+                                  return DropdownMenuItem<String>(
+                                    value: cat,
+                                    child: Text(cat),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      _selectedCategory = newValue;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+
+                        final taxField = _buildFormField(
+                          label: 'TAX (OPTIONAL)',
+                          child: _buildCustomTextField(
+                            controller: _taxController,
+                            hint: 'Optional tax amount',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          ),
+                        );
+
+                        if (isWide) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: merchantField),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: amountField),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(child: dateField),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: categoryField),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(child: taxField),
+                                  const SizedBox(width: 16),
+                                  const Expanded(child: SizedBox()),
+                                ],
+                              ),
+                            ],
+                          );
+                        } else {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              merchantField,
+                              const SizedBox(height: 16),
+                              amountField,
+                              const SizedBox(height: 16),
+                              dateField,
+                              const SizedBox(height: 16),
+                              categoryField,
+                              const SizedBox(height: 16),
+                              taxField,
+                            ],
+                          );
+                        }
+                      },
+                    ),
+
+                    if (_extractedItems.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: ExpansionTile(
+                          initiallyExpanded: _isItemsExpanded,
+                          onExpansionChanged: (exp) => setState(() => _isItemsExpanded = exp),
+                          title: Text(
+                            'Line Items (${_extractedItems.length})',
+                            style: AppTypography.headlineMedium.copyWith(fontSize: 14, color: const Color(0xFF6C38FF)),
+                          ),
+                          children: _extractedItems.map((item) {
+                            return ListTile(
+                              dense: true,
+                              title: Text(item.name, style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                              subtitle: item.quantity != null ? Text('Qty: ${item.quantity}') : null,
+                              trailing: Text(
+                                '₹${(item.totalPrice ?? item.price ?? 0).toStringAsFixed(2)}',
+                                style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF6C38FF)),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+
+                    // Confirm & Save Expense Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _confirmTransaction,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C38FF),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 3,
+                          shadowColor: const Color(0x406C38FF),
+                        ),
+                        child: Text(
+                          'Confirm & Save Expense',
+                          style: AppTypography.headlineMedium.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
 
-            const SizedBox(height: AppSpacing.l),
+            const SizedBox(height: 20),
 
-            // Action Buttons Row
-            if (!_hasScanned) ...[
-              if (_selectedImageDataUrl == null) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: MMButton(
-                        label: 'Take Photo',
-                        icon: Icons.camera_alt,
-                        onPressed: () => _handleImageSelection(isCamera: true),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.m),
-                    Expanded(
-                      child: MMButton(
-                        label: 'Choose from Gallery',
-                        type: MMButtonType.secondary,
-                        icon: Icons.photo_library,
-                        onPressed: () => _handleImageSelection(isCamera: false),
-                      ),
-                    ),
-                  ],
+            // Security Note Footer
+            Center(
+              child: Text(
+                'Security Note: AI Vision powered by Gemini. Receipts are parsed securely in-memory.',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontSize: 12,
+                  color: const Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w500,
                 ),
-              ] else ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: MMButton(
-                        label: 'Retake',
-                        type: MMButtonType.secondary,
-                        icon: Icons.refresh,
-                        onPressed: () => _handleImageSelection(isCamera: false),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.m),
-                    Expanded(
-                      child: MMButton(
-                        label: 'Scan Receipt',
-                        icon: Icons.auto_awesome,
-                        onPressed: () {
-                          if (!_isProcessing) {
-                            _processReceiptWithGemini();
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ] else ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: MMButton(
-                      label: 'Scan Another Receipt',
-                      type: MMButtonType.secondary,
-                      icon: Icons.add_a_photo,
-                      onPressed: () {
-                        setState(() {
-                          _selectedImageDataUrl = null;
-                          _hasScanned = false;
-                          _extractedReceipt = null;
-                        });
-                      },
-                    ),
-                  ),
-                ],
               ),
-            ],
+            ),
 
-            // Extracted Receipt Information Review Section
-            if (_hasScanned && !_isProcessing) ...[
-              const SizedBox(height: AppSpacing.stackLg),
-              const Divider(color: AppColors.outlineVariant),
-              const SizedBox(height: AppSpacing.m),
-
-              Row(
-                children: [
-                  Text(
-                    'Receipt Details',
-                    style: AppTypography.headlineMedium.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  if (_extractedReceipt != null && _extractedReceipt!.isSuccess)
-                    const MMStatusChip(
-                      label: 'Gemini 2.5 AI Verified',
-                      backgroundColor: Color(0xFFDCFCE7),
-                      textColor: Color(0xFF15803D),
-                    ),
-                ],
-              ),
-
-              const SizedBox(height: AppSpacing.m),
-
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.m),
-                  decoration: BoxDecoration(
-                    color: AppColors.tertiaryContainer.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(AppRadius.l),
-                    border: Border.all(color: AppColors.tertiaryContainer),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded, color: AppColors.onTertiaryContainer, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: AppTypography.labelSmall.copyWith(color: AppColors.onTertiaryContainer, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.s)),
-                        ),
-                        icon: const Icon(Icons.key, size: 14, color: Colors.white),
-                        label: Text(
-                          'Setup Key',
-                          style: AppTypography.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                        ),
-                        onPressed: () => _showApiKeySetupDialog(context),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.m),
-              ],
-
-              MMTextField(
-                label: 'Merchant',
-                hint: 'e.g. Reliance Fresh, Swiggy, Store',
-                controller: _merchantController,
-              ),
-
-              const SizedBox(height: AppSpacing.m),
-
-              MMTextField(
-                label: 'Amount (₹)',
-                hint: '450.00',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                controller: _amountController,
-              ),
-
-              const SizedBox(height: AppSpacing.m),
-
-              MMTextField(
-                label: 'Date',
-                hint: 'YYYY-MM-DD (e.g. 2026-08-20)',
-                controller: _dateController,
-              ),
-
-              const SizedBox(height: AppSpacing.m),
-
-              MMTextField(
-                label: 'Tax (₹)',
-                hint: '21.43 (Optional)',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                controller: _taxController,
-              ),
-
-              const SizedBox(height: AppSpacing.m),
-
-              MMTextField(
-                label: 'Category',
-                hint: 'Food & Dining, Transport, Groceries, Shopping, etc.',
-                controller: _categoryController,
-              ),
-
-              const SizedBox(height: AppSpacing.m),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: MMTextField(
-                      label: 'Subtotal (₹)',
-                      hint: 'Optional',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      controller: _subtotalController,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.m),
-                  Expanded(
-                    child: MMTextField(
-                      label: 'Discount (₹)',
-                      hint: 'Optional',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      controller: _discountController,
-                    ),
-                  ),
-                ],
-              ),
-
-              if (_extractedItems.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.m),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(AppRadius.l),
-                    border: Border.all(color: AppColors.outlineVariant),
-                  ),
-                  child: ExpansionTile(
-                    initiallyExpanded: _isItemsExpanded,
-                    onExpansionChanged: (exp) => setState(() => _isItemsExpanded = exp),
-                    title: Text(
-                      'Line Items (${_extractedItems.length})',
-                      style: AppTypography.headlineMedium.copyWith(fontSize: 14, color: AppColors.primary),
-                    ),
-                    children: _extractedItems.map((item) {
-                      return ListTile(
-                        dense: true,
-                        title: Text(item.name, style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                        subtitle: item.quantity != null ? Text('Qty: ${item.quantity}') : null,
-                        trailing: Text(
-                          '₹${(item.totalPrice ?? item.price ?? 0).toStringAsFixed(2)}',
-                          style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: AppSpacing.stackLg),
-
-              Text(
-                'Please review details before confirming.',
-                style: AppTypography.labelSmall.copyWith(color: AppColors.onSurfaceVariant),
-              ),
-
-              const SizedBox(height: AppSpacing.m),
-
-              MMButton(
-                label: 'Confirm & Add Expense',
-                onPressed: _confirmTransaction,
-              ),
-            ],
-            const SizedBox(height: AppSpacing.l),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildFormField({required String label, required Widget child}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.labelSmall.copyWith(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF475569),
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildCustomTextField({
+    required TextEditingController controller,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
+    IconData? trailingIcon,
+    VoidCallback? onTrailingTap,
+  }) {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: TextField(
+        controller: controller,
+        readOnly: readOnly,
+        keyboardType: keyboardType,
+        style: AppTypography.bodyMedium.copyWith(
+          color: const Color(0xFF0F172A),
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppTypography.bodyMedium.copyWith(
+            color: const Color(0xFF94A3B8),
+            fontSize: 14,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          suffixIcon: trailingIcon != null
+              ? IconButton(
+                  icon: Icon(trailingIcon, size: 18, color: const Color(0xFF64748B)),
+                  onPressed: onTrailingTap,
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom Painter for Dashed Rectangle Border
+class _DashedRectPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double radius;
+
+  _DashedRectPainter({
+    required this.color,
+    this.strokeWidth = 1.5,
+    this.gap = 5.0,
+    this.radius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final RRect rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(radius),
+    );
+
+    final Path path = Path()..addRRect(rrect);
+    final Path metricsPath = Path();
+
+    for (final PathMetric metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final double len = distance + gap > metric.length ? metric.length - distance : gap;
+        metricsPath.addPath(metric.extractPath(distance, distance + len / 2), Offset.zero);
+        distance += len;
+      }
+    }
+
+    canvas.drawPath(metricsPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRectPainter oldDelegate) => false;
 }
