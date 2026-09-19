@@ -29,14 +29,14 @@ public class AIService {
             You are K2i, not a generic ChatGPT assistant.
             """;
 
-    @Value("${ai.provider:gemini}")
-    private String aiProvider;
-
-    @Value("${ai.model:gemini-2.0-flash}")
-    private String aiModel;
-
-    @Value("${ai.api.key:}")
+    // API key injected via Spring @Value from gemini.api.key property.
+    // Property resolves from GEMINI_API_KEY environment variable (set in Render).
+    // Do NOT use System.getenv() directly — use @Value injection for consistency.
+    @Value("${gemini.api.key:}")
     private String aiApiKey;
+
+    @Value("${gemini.model:gemini-2.0-flash}")
+    private String aiModel;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -47,11 +47,8 @@ public class AIService {
     }
 
     public String generateK2iResponse(String userPrompt, Map<String, Object> context) {
-        String envKey = System.getenv("AI_API_KEY");
-        String keyToUse = (envKey != null && !envKey.trim().isEmpty()) ? envKey : aiApiKey;
-
-        if (keyToUse == null || keyToUse.trim().isEmpty()) {
-            throw new IllegalArgumentException("AI provider/API key is required.");
+        if (aiApiKey == null || aiApiKey.isBlank()) {
+            throw new IllegalArgumentException("AI API key is not configured. Set GEMINI_API_KEY in the server environment.");
         }
 
         Boolean hasData = (Boolean) context.get("hasData");
@@ -79,11 +76,11 @@ public class AIService {
                 + "USER QUESTION:\n\"" + userPrompt + "\"\n\n"
                 + "Provide a concise, direct, helpful answer using ONLY the numerical financial values supplied above. Do NOT fabricate numbers.";
 
-        String aiResponseText = callGeminiApi(keyToUse, aiModel, fullPrompt);
+        String aiResponseText = callGeminiApi(aiApiKey, aiModel, fullPrompt);
 
         if (!validateResponse(aiResponseText, context)) {
-            double balance = context.containsKey("currentBalance") ? ((Number) context.get("currentBalance")).doubleValue() : 0.0;
-            double income = context.containsKey("monthlyIncome") ? ((Number) context.get("monthlyIncome")).doubleValue() : 0.0;
+            double balance  = context.containsKey("currentBalance")  ? ((Number) context.get("currentBalance")).doubleValue()  : 0.0;
+            double income   = context.containsKey("monthlyIncome")   ? ((Number) context.get("monthlyIncome")).doubleValue()   : 0.0;
             double expenses = context.containsKey("monthlyExpenses") ? ((Number) context.get("monthlyExpenses")).doubleValue() : 0.0;
             return String.format("Based on your verified MoneyMateX records: Current balance is ₹%.0f, Monthly Income is ₹%.0f, and Monthly Expenses are ₹%.0f.",
                     balance, income, expenses);
@@ -98,8 +95,8 @@ public class AIService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> part = Map.of("text", prompt);
-        Map<String, Object> content = Map.of("parts", List.of(part));
+        Map<String, Object> part        = Map.of("text", prompt);
+        Map<String, Object> content     = Map.of("parts", List.of(part));
         Map<String, Object> requestBody = Map.of("contents", List.of(content));
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
@@ -110,7 +107,7 @@ public class AIService {
                 Map body = response.getBody();
                 List candidates = (List) body.get("candidates");
                 if (candidates != null && !candidates.isEmpty()) {
-                    Map firstCand = (Map) candidates.get(0);
+                    Map firstCand  = (Map) candidates.get(0);
                     Map contentObj = (Map) firstCand.get("content");
                     if (contentObj != null) {
                         List parts = (List) contentObj.get("parts");
@@ -143,26 +140,19 @@ public class AIService {
         addValueIfPresent(validValues, context.get("budgetUsagePercentage"));
 
         while (matcher.find()) {
-            String match = matcher.group();
+            String match    = matcher.group();
             String cleanNum = match.replaceAll("[₹,\\s]", "");
             try {
-                double val = Double.parseDouble(cleanNum);
-                if (val < 10 && val == Math.floor(val)) continue; // ignore small integer counts
-
-                long rounded = Math.round(val);
-                boolean found = false;
+                double val     = Double.parseDouble(cleanNum);
+                if (val < 10 && val == Math.floor(val)) continue;
+                long rounded   = Math.round(val);
+                boolean found  = false;
                 for (long validVal : validValues) {
-                    if (Math.abs(validVal - rounded) <= 2) {
-                        found = true;
-                        break;
-                    }
+                    if (Math.abs(validVal - rounded) <= 2) { found = true; break; }
                 }
-                if (!found) {
-                    return false;
-                }
+                if (!found) return false;
             } catch (Exception ignored) {}
         }
-
         return true;
     }
 

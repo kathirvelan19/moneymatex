@@ -4,12 +4,20 @@ import '../services/ai/ai_provider_interface.dart';
 import '../services/ai/ai_service.dart';
 import '../services/ocr/ocr_engine_interface.dart';
 import '../services/ocr/ocr_service.dart';
+import '../services/ocr/backend_ocr_service.dart';
 import '../services/payment_bank/payment_gateway_interface.dart';
 import '../services/payment_bank/bank_sync_service.dart';
 
 /// Provider for central Dio HTTP client
 final dioClientProvider = Provider<DioClient>((ref) {
   return DioClient();
+});
+
+/// Provider for BackendOcrService — routes receipt scanning through Spring Boot backend.
+/// The Gemini API key stays server-side. Flutter never calls Gemini directly for OCR.
+final backendOcrServiceProvider = Provider<BackendOcrService>((ref) {
+  final dioClient = ref.watch(dioClientProvider);
+  return BackendOcrService(dioClient);
 });
 
 /// Provider for isolated AI Service (Implements AIProviderInterface)

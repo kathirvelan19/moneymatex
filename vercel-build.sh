@@ -48,14 +48,13 @@ flutter pub get
 
 echo "=== Building Flutter Web ==="
 
+# SECURITY: GEMINI_API_KEY is intentionally NOT passed to Flutter via --dart-define.
+# Gemini API calls are made by the Spring Boot backend on Render.
+# The Flutter Web frontend only needs the backend API base URL.
 DART_DEFINES=""
 
 if [ -n "$API_BASE_URL" ]; then
     DART_DEFINES="$DART_DEFINES --dart-define=API_BASE_URL=$API_BASE_URL"
-fi
-
-if [ -n "$GEMINI_API_KEY" ]; then
-    DART_DEFINES="$DART_DEFINES --dart-define=GEMINI_API_KEY=$GEMINI_API_KEY"
 fi
 
 flutter build web --release --no-tree-shake-icons $DART_DEFINES

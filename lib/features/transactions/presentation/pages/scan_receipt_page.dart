@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/config/env_config.dart';
+import '../../../../core/providers/core_providers.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/services/web_ocr_service.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/mm_chip.dart';
 import '../../../ai/domain/models/receipt_data.dart';
-import '../../../ai/presentation/providers/ai_providers.dart';
 import '../../domain/entities/transaction_entity.dart';
 import '../providers/transactions_provider.dart';
 
@@ -69,115 +68,8 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     super.dispose();
   }
 
-  void _showApiKeySetupDialog(BuildContext context) {
-    final keyController = TextEditingController(text: EnvConfig.geminiApiKey);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.key_outlined, color: Color(0xFF6C38FF)),
-              SizedBox(width: 8),
-              Text('Gemini API Key Settings'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Enter your Google Gemini API Key to enable AI receipt OCR scanning:',
-                style: AppTypography.bodyMedium.copyWith(fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: keyController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Gemini API Key',
-                  hintText: 'AIzaSy...',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Get your key free at aistudio.google.com',
-                style: AppTypography.labelSmall.copyWith(color: const Color(0xFF6C38FF), fontSize: 11),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C38FF),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                final navigator = Navigator.of(context);
-                final messenger = ScaffoldMessenger.of(context);
-                final key = keyController.text.trim();
-                await EnvConfig.saveGeminiApiKey(key);
-                if (mounted) {
-                  setState(() {
-                    _errorMessage = null;
-                  });
-                  navigator.pop();
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text(key.isNotEmpty
-                          ? 'Gemini API Key saved! Try scanning again.'
-                          : 'Gemini API Key cleared.'),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Save Key'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Step 1: Pick Image from Gallery or Camera
-  Future<void> _handleImageSelection({bool isCamera = false}) async {
-    try {
-      final dataUrl = await WebOcrService.pickReceiptImage(isCamera: isCamera);
-
-      if (dataUrl == null || dataUrl.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please select a receipt image first.')),
-          );
-        }
-        return;
-      }
-
-      setState(() {
-        _selectedImageDataUrl = dataUrl;
-        _hasScanned = false;
-        _extractedReceipt = null;
-        _errorMessage = null;
-      });
-
-      // Auto trigger analysis
-      _processReceiptWithGemini();
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'We couldn\'t process this image. Please try another receipt.';
-        });
-      }
-    }
-  }
-
-  /// Step 2: User triggers Gemini 3.6 Flash / 2.5 Flash API
+  /// Step 2: Send receipt image to Spring Boot backend for Gemini-powered extraction.
+  /// The backend owns the Gemini API key — Flutter never calls Gemini directly.
   Future<void> _processReceiptWithGemini() async {
     if (_selectedImageDataUrl == null || _selectedImageDataUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -189,12 +81,12 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     setState(() {
       _isProcessing = true;
       _errorMessage = null;
-      _loadingStepText = 'Analyzing with Gemini AI...';
+      _loadingStepText = 'Analyzing with AI...';
     });
 
     try {
-      final geminiService = ref.read(geminiServiceProvider);
-      final receipt = await geminiService.parseReceipt(_selectedImageDataUrl!);
+      final backendOcr = ref.read(backendOcrServiceProvider);
+      final receipt = await backendOcr.parseReceiptViaBackend(_selectedImageDataUrl!);
 
       if (mounted) {
         setState(() {
@@ -245,6 +137,40 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
       }
     }
   }
+
+
+  /// Step 1: Pick Image from Gallery or Camera
+  Future<void> _handleImageSelection({bool isCamera = false}) async {
+    try {
+      final dataUrl = await WebOcrService.pickReceiptImage(isCamera: isCamera);
+
+      if (dataUrl == null || dataUrl.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please select a receipt image first.')),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _selectedImageDataUrl = dataUrl;
+        _hasScanned = false;
+        _extractedReceipt = null;
+        _errorMessage = null;
+      });
+
+      // Auto trigger analysis
+      _processReceiptWithGemini();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'We couldn\'t process this image. Please try another receipt.';
+        });
+      }
+    }
+  }
+
 
   /// Date Picker Dialog Handler
   Future<void> _selectDate(BuildContext context) async {
@@ -675,8 +601,8 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
                               ),
                             ),
                             TextButton(
-                              onPressed: () => _showApiKeySetupDialog(context),
-                              child: const Text('Setup Key', style: TextStyle(color: Color(0xFF6C38FF), fontWeight: FontWeight.bold)),
+                              onPressed: _processReceiptWithGemini,
+                              child: const Text('Retry', style: TextStyle(color: Color(0xFF6C38FF), fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),

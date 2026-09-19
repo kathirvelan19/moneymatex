@@ -3,12 +3,18 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Centralized Environment Configuration Manager
+///
+/// Security contract:
+///  - GEMINI_API_KEY is NEVER embedded in Flutter Web or Dart source.
+///  - Gemini API calls are made exclusively by the Spring Boot backend.
+///  - The Flutter app only needs API_BASE_URL to reach the backend.
+///  - User-configurable keys (for direct Gemini AI chat features) are stored
+///    in SharedPreferences and never committed to Git.
 abstract class EnvConfig {
   static const String _prefsKey = 'custom_gemini_api_key';
-  static const String _defaultFallbackKey = 'AIzaSyAv5RBcwYRaFeOAZhYQkJBJ4G2PhZaZ_WI';
   static String _userCustomKey = '';
 
-  /// Load environment variables from .env file and SharedPreferences gracefully
+  /// Load environment variables from .env file and SharedPreferences gracefully.
   static Future<void> init() async {
     try {
       await dotenv.load(fileName: '.env');
@@ -25,7 +31,9 @@ abstract class EnvConfig {
     }
   }
 
-  /// Save user provided Gemini API Key to SharedPreferences
+  /// Save user-provided Gemini API key to SharedPreferences.
+  /// Used only for in-app AI chat/insights features that call Gemini client-side.
+  /// Receipt scanning always goes through the Spring Boot backend — never uses this key.
   static Future<void> saveGeminiApiKey(String newKey) async {
     _userCustomKey = newKey.trim();
     try {
@@ -36,21 +44,27 @@ abstract class EnvConfig {
     }
   }
 
-  /// Check if a valid Gemini API key is configured
+  /// Whether the user has configured an in-app Gemini API key.
   static bool get isGeminiApiKeyConfigured => geminiApiKey.isNotEmpty;
 
-  /// Returns true whenever a Gemini API key is present
-  static bool get hasValidCustomGeminiApiKey {
-    final key = geminiApiKey;
-    return key.isNotEmpty;
-  }
+  /// Returns true when a non-placeholder in-app Gemini key is present.
+  static bool get hasValidCustomGeminiApiKey => geminiApiKey.isNotEmpty;
 
-  /// Returns GEMINI_API_KEY safely without throwing NotInitializedError
+  /// Returns the in-app Gemini API key for client-side AI features (chat/insights).
+  ///
+  /// Priority order:
+  ///  1. User-saved key (SharedPreferences)
+  ///  2. .env file key (local dev only, NOT for production)
+  ///
+  /// IMPORTANT: This key is used only for AI chat/spending insights.
+  /// Receipt OCR scanning routes through the Spring Boot backend — no key needed here.
   static String get geminiApiKey {
+    // 1. User-saved key (highest priority)
     if (_userCustomKey.isNotEmpty) {
       return _userCustomKey;
     }
 
+    // 2. .env file (local development only — never deployed to Vercel)
     try {
       if (dotenv.isInitialized) {
         final key = dotenv.env['GEMINI_API_KEY'];
@@ -63,17 +77,7 @@ abstract class EnvConfig {
       }
     } catch (_) {}
 
-    final envDefineKey = const String.fromEnvironment(
-      'GEMINI_API_KEY',
-      defaultValue: '',
-    ).trim();
-
-    if (envDefineKey.isNotEmpty && !envDefineKey.contains('your_gemini_api_key_here')) {
-      return envDefineKey;
-    }
-
-    return _defaultFallbackKey;
+    // No key available — return empty. Features that need the key will prompt the user.
+    return '';
   }
 }
-
-
